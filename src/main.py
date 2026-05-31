@@ -6,8 +6,13 @@ from contextlib import asynccontextmanager
 # Suppress noisy [EXPERIMENTAL] UserWarnings from google-adk A2A internals
 warnings.filterwarnings("ignore", message=r"\[EXPERIMENTAL\]", category=UserWarning)
 
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi import HTTPException
 from fastapi import Query
+from fastapi import Request
+from pydantic import BaseModel
 from starlette.routing import Route
 
 from src.agents.base import create_a2a_routes
@@ -16,6 +21,8 @@ from src.agents.requirements_analyst import requirements_analyst_agent
 from src.agents.supervisor import supervisor_agent
 from src.agents.system_designer import system_designer_agent
 from src.agents.tester import tester_agent
+from src.agents.code_reviewer import code_reviewer_agent
+from src.agents.devops_engineer import devops_engineer_agent
 from src.common.tools import set_registry
 from src.config import settings
 from src.initial_setup import get_logger
@@ -51,6 +58,8 @@ AGENT_MODULES = {
     "system_designer": system_designer_agent,
     "coder": coder_agent,
     "tester": tester_agent,
+    "code_reviewer": code_reviewer_agent,
+    "devops_engineer": devops_engineer_agent,
 }
 
 registry: AgentRegistry | None = None
@@ -168,3 +177,69 @@ async def get_logs(n: int = Query(default=200, ge=1, le=500)):
     """Return the last n lines from the in-memory log buffer."""
     lines = list(_log_buffer)[-n:]
     return {"lines": lines, "total": len(lines)}
+
+
+class GenerateAgentRequest(BaseModel):
+    name: str
+    purpose: str
+
+
+@app.post("/agents/generate", tags=["Agent Management"])
+async def generate_agent(body: GenerateAgentRequest, req: Request):
+    """LLM-generate a new agent, write its file, update the registry, and mount its routes live."""
+    from src.agent_factory import (
+        create_agent_file,
+        generate_agent_spec,
+        load_agent_instance,
+        patch_main_py,
+    )
+    from src.registry.models import AgentRegistryEntry
+
+    name = body.name.strip().lower().replace("-", "_").replace(" ", "_")
+
+    if not name.isidentifier():
+        raise HTTPException(status_code=400, detail=f"'{name}' is not a valid Python identifier")
+
+    if Path(f"src/agents/{name}.py").exists():
+        raise HTTPException(status_code=409, detail=f"Agent '{name}' already exists")
+
+    if registry and registry.get_agent_by_name(name):
+        raise HTTPException(status_code=409, detail=f"Agent '{name}' is already registered")
+
+    # 1. Generate spec via LLM
+    spec = generate_agent_spec(name, body.purpose)
+
+    # 2. Write agent Python file
+    create_agent_file(name, spec)
+
+    # 3. Patch main.py so the agent survives server restarts
+    patch_main_py(name)
+
+    # 4. Register in registry (saves registry.yaml)
+    entry = AgentRegistryEntry(
+        name=name,
+        description=spec["description"],
+        endpoint=f"/a2a/{name}",
+        skills=spec["skills"],
+        status="active",
+    )
+    registry.add_agent(entry)
+
+    # 5. Dynamically load and mount A2A routes without restart
+    agent_instance = load_agent_instance(name)
+    routes = await create_a2a_routes(
+        agent=agent_instance,
+        route_prefix=entry.endpoint,
+        host=settings.app_host,
+        port=settings.app_port,
+    )
+    for route in routes:
+        req.app.routes.append(route)
+
+    logger.info("Dynamically mounted agent '%s' at %s", name, entry.endpoint)
+    return {
+        "status": "created",
+        "name": name,
+        "endpoint": entry.endpoint,
+        "spec": spec,
+    }

@@ -195,6 +195,60 @@ with tab_registry:
                 except Exception as e:
                     st.error(f"Validation error: {e}")
 
+    st.markdown("---")
+    with st.expander("✨ Auto-Generate Agent (AI-powered)", expanded=False):
+        st.caption(
+            "Describe what the agent should do — the AI will generate its description, "
+            "skills, and system prompt, create the Python file, and register it live."
+        )
+        with st.form("autogen_agent_form"):
+            ag_name = st.text_input(
+                "Agent Name",
+                placeholder="code_reviewer",
+                help="snake_case identifier, e.g. code_reviewer",
+            )
+            ag_purpose = st.text_area(
+                "Purpose / Domain",
+                placeholder="Reviews Python code for bugs, style issues, and security vulnerabilities. "
+                "Produces a structured review report with severity ratings.",
+                height=100,
+            )
+            submitted = st.form_submit_button("Generate & Register", type="primary")
+
+        if submitted:
+            ag_name_clean = ag_name.strip().lower().replace("-", "_").replace(" ", "_")
+            if not ag_name_clean or not ag_purpose.strip():
+                st.error("Both Agent Name and Purpose are required.")
+            else:
+                with st.spinner(f"Generating agent '{ag_name_clean}' via Gemini…"):
+                    try:
+                        resp = requests.post(
+                            f"{app_url}/agents/generate",
+                            json={"name": ag_name_clean, "purpose": ag_purpose.strip()},
+                            timeout=60,
+                        )
+                        if resp.status_code == 200:
+                            data = resp.json()
+                            spec = data.get("spec", {})
+                            st.success(
+                                f"Agent **{data['name']}** created and mounted at `{data['endpoint']}`"
+                            )
+                            st.markdown(f"**Description:** {spec.get('description', '')}")
+                            st.markdown(f"**Skills:** {', '.join(spec.get('skills', []))}")
+                            with st.expander("System Prompt"):
+                                st.text(spec.get("instruction", ""))
+                            st.info("The agent is live now. `main.py` has also been patched so it persists after restart.")
+                            st.rerun()
+                        else:
+                            detail = resp.json().get("detail", resp.text)
+                            st.error(f"Error {resp.status_code}: {detail}")
+                    except requests.exceptions.ConnectionError:
+                        st.error(
+                            f"Cannot connect to {app_url}. Make sure the app server is running."
+                        )
+                    except Exception as e:
+                        st.error(f"Unexpected error: {e}")
+
 # ===========================================================================
 # TAB 2: Run Task
 # ===========================================================================
