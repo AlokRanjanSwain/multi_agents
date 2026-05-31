@@ -1,0 +1,26 @@
+[project]
+name = "multi-agents"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "a2a-sdk[all]>=0.3.9,<0.4",
+    "fastapi>=0.136.3",
+    "google-adk>=2.1.0",
+    "langfuse>=4.6.1",
+    "openinference-instrumentation-google-adk>=0.1.15",
+    "pydantic-settings>=2.14.1",
+    "pyyaml>=6.0.3",
+    "streamlit>=1.57.0",
+    "uvicorn>=0.48.0",
+    "watchdog>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]

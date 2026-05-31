@@ -1,0 +1,50 @@
+services:
+  # === Application ===
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      # Override for internal Docker network — Langfuse is reachable via service name
+      LANGFUSE_BASE_URL: http://langfuse-web:3000
+    volumes:
+      - ./registry.yaml:/app/registry.yaml
+      - ./src:/app/src
+      - ./ui:/app/ui
+      - ./artifacts:/app/artifacts
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - sdlc-net
+
+  registry-ui:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    env_file: .env
+    environment:
+      LANGFUSE_BASE_URL: http://langfuse-web:3000
+      APP_BASE_URL: http://app:8000
+    volumes:
+      - ./registry.yaml:/app/registry.yaml
+      - ./src:/app/src
+      - ./ui:/app/ui
+      - ./artifacts:/app/artifacts
+    command: ["streamlit", "run", "ui/registry_app.py", "--server.port", "8501", "--server.address", "0.0.0.0"]
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - sdlc-net
+
+
+networks:
+  sdlc-net:
+    external: true

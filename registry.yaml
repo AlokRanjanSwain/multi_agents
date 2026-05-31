@@ -1,0 +1,52 @@
+agents:
+  - name: requirements_analyst
+    description: "Analyzes project descriptions and produces structured requirements documents with user stories, acceptance criteria, and constraints. Handles feature requests, system analysis, and business requirements for any type of software project."
+    endpoint: /a2a/requirements
+    skills:
+      - requirements analysis
+      - user stories
+      - acceptance criteria
+      - business analysis
+      - feature specification
+      - project scoping
+    status: active
+
+  - name: system_designer
+    description: "Creates system architecture designs, component diagrams, data models, and API specifications from requirements."
+    endpoint: /a2a/designer
+    skills:
+      - system design
+      - architecture
+      - data modeling
+      - API design
+      - component design
+    status: active
+
+  - name: coder
+    description: "Generates production-ready code implementations in Python, JavaScript, and other languages. Builds REST APIs, web apps, CLI tools, scripts, and full-stack applications from design specifications."
+    endpoint: /a2a/coder
+    skills:
+      - coding
+      - implementation
+      - programming
+      - code generation
+      - software development
+      - Python
+      - JavaScript
+      - REST API
+      - backend development
+      - API development
+      - web development
+      - CLI tools
+    status: active
+
+  - name: tester
+    description: "Generates test plans, test cases, and executable test code from requirements and source code."
+    endpoint: /a2a/tester
+    skills:
+      - testing
+      - QA
+      - test cases
+      - test automation
+      - quality assurance
+    status: active
