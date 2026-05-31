@@ -15,14 +15,10 @@ from fastapi import Request
 from pydantic import BaseModel
 from starlette.routing import Route
 
+import importlib
+
 from src.agents.base import create_a2a_routes
-from src.agents.coder import coder_agent
-from src.agents.requirements_analyst import requirements_analyst_agent
 from src.agents.supervisor import supervisor_agent
-from src.agents.system_designer import system_designer_agent
-from src.agents.tester import tester_agent
-from src.agents.code_reviewer import code_reviewer_agent
-from src.agents.devops_engineer import devops_engineer_agent
 from src.common.tools import set_registry
 from src.config import settings
 from src.initial_setup import get_logger
@@ -52,17 +48,13 @@ _buf_handler.setFormatter(
 )
 logging.getLogger("multi_agents").addHandler(_buf_handler)
 
-# Agent name → agent instance mapping
-AGENT_MODULES = {
-    "requirements_analyst": requirements_analyst_agent,
-    "system_designer": system_designer_agent,
-    "coder": coder_agent,
-    "tester": tester_agent,
-    "code_reviewer": code_reviewer_agent,
-    "devops_engineer": devops_engineer_agent,
-}
-
 registry: AgentRegistry | None = None
+
+
+def _load_agent(name: str):
+    """Dynamically import src/agents/{name}.py and return the agent instance."""
+    module = importlib.import_module(f"src.agents.{name}")
+    return getattr(module, f"{name}_agent")
 
 
 @asynccontextmanager
@@ -79,11 +71,12 @@ async def lifespan(app: FastAPI):
     # 3. Start file watcher for hot-reload
     observer = start_registry_watcher(registry, settings.registry_path)
 
-    # 4. Mount A2A routes for each registered agent
+    # 4. Mount A2A routes for each registered agent (discovered dynamically from registry)
     for entry in registry.get_all_agents():
-        agent_instance = AGENT_MODULES.get(entry.name)
-        if agent_instance is None:
-            logger.warning("No agent implementation for '%s' — skipping", entry.name)
+        try:
+            agent_instance = _load_agent(entry.name)
+        except (ImportError, AttributeError):
+            logger.warning("No agent module found for '%s' — skipping", entry.name)
             continue
         try:
             routes = await create_a2a_routes(
@@ -191,7 +184,6 @@ async def generate_agent(body: GenerateAgentRequest, req: Request):
         create_agent_file,
         generate_agent_spec,
         load_agent_instance,
-        patch_main_py,
     )
     from src.registry.models import AgentRegistryEntry
 
@@ -212,10 +204,7 @@ async def generate_agent(body: GenerateAgentRequest, req: Request):
     # 2. Write agent Python file
     create_agent_file(name, spec)
 
-    # 3. Patch main.py so the agent survives server restarts
-    patch_main_py(name)
-
-    # 4. Register in registry (saves registry.yaml)
+    # 3. Register in registry (saves registry.yaml)
     entry = AgentRegistryEntry(
         name=name,
         description=spec["description"],
@@ -225,7 +214,7 @@ async def generate_agent(body: GenerateAgentRequest, req: Request):
     )
     registry.add_agent(entry)
 
-    # 5. Dynamically load and mount A2A routes without restart
+    # 4. Dynamically load and mount A2A routes without restart
     agent_instance = load_agent_instance(name)
     routes = await create_a2a_routes(
         agent=agent_instance,

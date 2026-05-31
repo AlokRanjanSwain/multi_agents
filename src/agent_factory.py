@@ -11,7 +11,6 @@ from src.initial_setup import get_logger
 logger = get_logger(__name__)
 
 _AGENTS_DIR = Path(__file__).parent / "agents"
-_MAIN_PY = Path(__file__).parent / "main.py"
 
 _SPEC_PROMPT = """\
 You are a software architect designing a specialized AI agent for an SDLC multi-agent system.
@@ -86,34 +85,6 @@ def create_agent_file(name: str, spec: dict) -> Path:
     path.write_text(content, encoding="utf-8")
     logger.info("Created agent file: %s", path)
     return path
-
-
-def patch_main_py(name: str) -> None:
-    """Inject import statement and AGENT_MODULES entry into src/main.py."""
-    text = _MAIN_PY.read_text(encoding="utf-8")
-    var_name = f"{name}_agent"
-    import_line = f"from src.agents.{name} import {var_name}"
-
-    # 1. Add import after the last existing "from src.agents.*" import
-    if import_line not in text:
-        matches = list(re.finditer(r"^from src\.agents\.\w+ import \w+$", text, re.MULTILINE))
-        if matches:
-            insert_at = matches[-1].end()
-            text = text[:insert_at] + "\n" + import_line + text[insert_at:]
-
-    # 2. Add entry to AGENT_MODULES before its closing brace
-    entry = f'    "{name}": {var_name},'
-    if entry not in text:
-        text = re.sub(
-            r"(AGENT_MODULES\s*=\s*\{[^}]*?)(\n\})",
-            lambda m: m.group(1) + f"\n{entry}" + m.group(2),
-            text,
-            count=1,
-            flags=re.DOTALL,
-        )
-
-    _MAIN_PY.write_text(text, encoding="utf-8")
-    logger.info("Patched main.py for agent '%s'", name)
 
 
 def load_agent_instance(name: str):

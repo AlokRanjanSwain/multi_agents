@@ -80,3 +80,17 @@ agents:
   - automation
   - containerization
   status: active
+- name: security_agent
+  description: This agent specializes in identifying, analyzing, and reporting security
+    vulnerabilities within application code, infrastructure configurations, and architectural
+    designs throughout the SDLC.
+  endpoint: /a2a/security_agent
+  skills:
+  - vulnerability_scanning
+  - static_analysis
+  - dynamic_analysis
+  - threat_modeling
+  - penetration_testing
+  - compliance_auditing
+  - secure_coding_review
+  status: active
