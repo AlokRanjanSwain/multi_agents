@@ -1,0 +1,73 @@
+site_name: Multi-Agent SDLC System
+site_description: A production-ready multi-agent system that automates the Software Development Lifecycle using Google ADK and the A2A protocol.
+site_author: AlokRanjanSwain
+site_url: https://AlokRanjanSwain.github.io/multi_agents/
+
+repo_name: AlokRanjanSwain/multi_agents
+repo_url: https://github.com/AlokRanjanSwain/multi_agents
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.instant
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - tables
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Agents: agents.md
+  - Setup: setup.md
+  - API Reference: api.md
+  - Development Guide: development.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/AlokRanjanSwain/multi_agents

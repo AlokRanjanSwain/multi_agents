@@ -22,5 +22,6 @@ pythonpath = ["."]
 
 [dependency-groups]
 dev = [
+    "mkdocs-material>=9.0",
     "pytest>=9.0.3",
 ]
